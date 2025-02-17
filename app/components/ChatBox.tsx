@@ -32,32 +32,32 @@ const Chatbox = () => {
     // Fetch available rooms when component mounts
     socket.emit('get-available-rooms');
 
-    socket.on('availableRooms', (rooms: Room[]) => {
+    socket.on('availableRooms', (rooms) => {
       setAvailableRooms(rooms);
     });
 
     // Handle receiving message history for chat rooms
-    socket.on('messageHistory', (history: Message[], room: string) => {
+    socket.on('messageHistory', (history, room) => {
       setMessages(history);
       setRoom(room);
     });
 
     // Handle new messages for chat rooms
-    socket.on('newMessage', (messageData: Message) => {
+    socket.on('newMessage', (messageData) => {
       setMessages((prevMessages) => [...prevMessages, messageData]);
     });
 
     // Handle user joining or leaving a room
-    socket.on('user_joined', (message: string) => {
+    socket.on('user_joined', (message) => {
       setMessages((prevMessages) => [...prevMessages, { sender: 'System', message }]);
     });
 
-    socket.on('user_left', (message: string) => {
+    socket.on('user_left', (message) => {
       setMessages((prevMessages) => [...prevMessages, { sender: 'System', message }]);
     });
 
     // Listen for game-specific messages
-    socket.on('gameMessage', (message: string) => {
+    socket.on('gameMessage', (message) => {
       setMessages((prevMessages) => [...prevMessages, { sender: 'Game', message }]);
     });
 
@@ -109,23 +109,28 @@ const Chatbox = () => {
   };
 
   return (
-    <div>
-      <h2>Chatbox</h2>
-      <div>
+    <div className="fixed bottom-4 left-4 w-80 p-4 border rounded-lg bg-white shadow-lg z-50">
+      <h2 className="text-lg font-semibold mb-2">Chatbox</h2>
+      <div className="mb-2">
         <input
           type="text"
           placeholder="Enter username"
           value={userName}
           onChange={(e) => setUserName(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md"
         />
       </div>
       
-      <div>
-        <h3>Available Rooms</h3>
+      <div className="mb-2">
+        <h3 className="text-sm font-medium">Available Rooms</h3>
         {availableRooms.length > 0 ? (
-          <ul>
+          <ul className="space-y-1">
             {availableRooms.map((room, idx) => (
-              <li key={idx} onClick={() => handleRoomSelect(room.name)}>
+              <li
+                key={idx}
+                className="cursor-pointer text-blue-600 hover:underline"
+                onClick={() => handleRoomSelect(room.name)}
+              >
                 {room.name} ({room.type})
               </li>
             ))}
@@ -135,9 +140,9 @@ const Chatbox = () => {
         )}
       </div>
 
-      <div>
-        <h3>Messages</h3>
-        <div>
+      <div className="mb-2">
+        <h3 className="text-sm font-medium">Messages</h3>
+        <div className="space-y-1 max-h-48 overflow-y-auto">
           {messages.map((msg, idx) => (
             <div key={idx}>
               <strong>{msg.sender}:</strong> {msg.message}
@@ -146,20 +151,32 @@ const Chatbox = () => {
         </div>
       </div>
 
-      <div>
+      <div className="mb-2">
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Type a message"
+          className="w-full p-2 border border-gray-300 rounded-md"
         />
-        <button onClick={sendMessage}>Send</button>
+        <button
+          onClick={sendMessage}
+          className="w-full mt-2 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+        >
+          Send
+        </button>
       </div>
 
-      <div>
-        <button onClick={() => createRoom({ newRoomName: 'New Chat Room', type: 'chat' })}>
+      <div className="space-x-2">
+        <button
+          onClick={() => createRoom({ newRoomName: 'New Chat Room', type: 'chat' })}
+          className="w-full py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+        >
           Create Chat Room
         </button>
-        <button onClick={() => createRoom({ newRoomName: 'New Game Room', type: 'game' })}>
+        <button
+          onClick={() => createRoom({ newRoomName: 'New Game Room', type: 'game' })}
+          className="w-full py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
+        >
           Create Game Room
         </button>
       </div>
