@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-import { socket } from "../lib/socketClient";
-import ChatForm from "./ChatForm";
-import ChatMessage from "./ChatMessage";
+import { socket } from "../lib/socketClient";  // Assuming your socket connection is handled here
+import ChatForm from "./ChatForm"; // Assuming you have a form component for sending messages
+import ChatMessage from "./ChatMessage"; // Assuming a component to display messages
 import "../globals.css";
 
 // Define types for rooms and messages
@@ -21,28 +21,27 @@ interface Message {
   message: string;
 }
 
-// You should replace this with your server URL
-// const socket = io("http://localhost:3005");
-
 const Chatbox = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [room, setRoom] = useState('');
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState(localStorage.getItem('userName') || ''); // Retrieve from localStorage
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [isGameRoom, setIsGameRoom] = useState(false);
-
+  const [errorMessage, setErrorMessage] = useState(''); // To display errors (if any)
 
   useEffect(() => {
     const fetchUserName = async () => {
       const response = await fetch('/api/get-user'); // Replace with your API endpoint
       const data = await response.json();
       setUserName(data.username);
+      localStorage.setItem('userName', data.username); // Persist userName in localStorage
     };
-  
-    fetchUserName();
-  }, []);
-  
+
+    if (!userName) {
+      fetchUserName(); // Fetch if the username is not set yet
+    }
+  }, [userName]);
 
   useEffect(() => {
     // Fetch available rooms when component mounts
@@ -87,7 +86,6 @@ const Chatbox = () => {
     };
   }, []);
 
-  // Handle message send event for chat rooms
   const sendMessage = () => {
     if (message.trim() === '') return;
 
@@ -102,19 +100,24 @@ const Chatbox = () => {
     setMessage('');
   };
 
-  // Join a room (either game or chat)
   const joinRoom = (roomName: string, type: 'chat' | 'game') => {
     setRoom(roomName);
     setIsGameRoom(type === 'game');
     socket.emit('join-room', { room: roomName, userName });
   };
 
-  // Handle creating a room
   const createRoom = ({ newRoomName, type }: CreateRoomParams) => {
     socket.emit(type === 'game' ? 'createGameRoom' : 'createRoom', newRoomName);
+
+    socket.on('createRoomResponse', (response) => {
+      if (response.success) {
+        joinRoom(newRoomName, type);
+      } else {
+        setErrorMessage(response.error || 'Error creating room');
+      }
+    });
   };
 
-  // Handle room selection
   const handleRoomSelect = (selectedRoom: string) => {
     const roomType = availableRooms.find((room) => room.name === selectedRoom)?.type;
     if (roomType) {
@@ -196,6 +199,8 @@ const Chatbox = () => {
           Create Game Room
         </button>
       </div>
+
+      {errorMessage && <div className="text-red-500 mt-2">{errorMessage}</div>}
     </div>
   );
 };
