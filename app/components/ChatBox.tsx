@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import { socket } from "../lib/socketClient";
+import ChatForm from "./ChatForm";
+import ChatMessage from "./ChatMessage";
+import "../globals.css";
 
 // Define types for rooms and messages
 interface Room {
@@ -18,7 +22,7 @@ interface Message {
 }
 
 // You should replace this with your server URL
-const socket = io("http://localhost:3005");
+// const socket = io("http://localhost:3005");
 
 const Chatbox = () => {
   const [message, setMessage] = useState('');
@@ -27,6 +31,18 @@ const Chatbox = () => {
   const [userName, setUserName] = useState('');
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [isGameRoom, setIsGameRoom] = useState(false);
+
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      const response = await fetch('/api/get-user'); // Replace with your API endpoint
+      const data = await response.json();
+      setUserName(data.username);
+    };
+  
+    fetchUserName();
+  }, []);
+  
 
   useEffect(() => {
     // Fetch available rooms when component mounts
@@ -109,15 +125,15 @@ const Chatbox = () => {
   };
 
   return (
-    <div className="fixed bottom-4 left-4 w-80 p-4 border rounded-lg bg-white shadow-lg z-50">
-      <h2 className="text-lg font-semibold mb-2">Chatbox</h2>
+    <div className="fixed bottom-4 left-4 w-80 p-4 border rounded-lg bg-gray-800 shadow-lg z-50">
+      <h2 className="text-lg text-white font-semibold mb-2">Chatbox</h2>
       <div className="mb-2">
         <input
           type="text"
           placeholder="Enter username"
           value={userName}
           onChange={(e) => setUserName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+          className="w-full px-3 py-2 border text-black border-gray-300 rounded-md"
         />
       </div>
       
@@ -156,7 +172,7 @@ const Chatbox = () => {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Type a message"
-          className="w-full p-2 border border-gray-300 rounded-md"
+          className="w-full p-2 border border-gray-300 rounded-md text-black"
         />
         <button
           onClick={sendMessage}
