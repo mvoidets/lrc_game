@@ -183,5 +183,5 @@ const Chatbox = () => {
     </div>
   );
 };
-
+//this is the end of the Chatbox component
 export default Chatbox;
