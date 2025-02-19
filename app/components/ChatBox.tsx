@@ -8,7 +8,7 @@ import "../globals.css";
 
 export default function ChatBox() {
   const [room, setRoom] = useState("");
-  const [tempRoom, setTempRoom] = useState(""); 
+  const [tempRoom, setTempRoom] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [rooms, setRooms] = useState<string[]>([]);
   const [userName, setUserName] = useState("");
@@ -19,30 +19,48 @@ export default function ChatBox() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [roomType, setRoomType] = useState("chat");
+  const [filteredRooms, setFilteredRooms] = useState([]); 
 
- 
+         // State to store the list of rooms
+  
+         useEffect(() => {
+          // Fetch all rooms when the modal opens (this effect runs when component mounts)
+          socket.emit('fetchRooms');  // Emit event to fetch rooms from the server
+      
+          // Listen for available rooms from the server
+          socket.on('availableRooms', (allRooms) => {
+            setRooms(allRooms);
+            setFilteredRooms(allRooms.filter((room: { type: string }) => room.type === roomType));  // Filter rooms by type
+          });
+      
+          return () => {
+            socket.off('availableRooms');  // Cleanup on unmount
+          };
+        }, []);
 
 
-   
   // Connect to the server and listen for events
   useEffect(() => {
     socket.on("connect", () => {
       console.log("Connected to server");
     });
-  
+
     return () => {
       socket.off("connect");
     };
   }, []);
 
   useEffect(() => {
-       // Emit to get available rooms when the component mounts
+    // Emit to get available rooms when the component mounts
     socket.emit("get-available-rooms");
 
     // Listen for updates to available rooms
-    socket.on("availableRooms", (rooms: string[]) => {
-      setRooms(rooms);
-    });
+    socket.on('availableRooms', (allRooms) => {
+      setRooms(allRooms);
+      setFilteredRooms(allRooms.filter((room: { type: string }) => room.type === roomType));
+  });
+     
 
     // Listen for user joined event
     socket.on("user_joined", (message, room) => {
@@ -75,14 +93,14 @@ export default function ChatBox() {
 
     // Cleanup listeners on unmount
     return () => {
-      
+
       socket.off("availableRooms");
       socket.off("user_joined");
       socket.off("leave-room");
       socket.off("newMessage");
       socket.off("messageHistory");
     };
-  }, []);
+  }, [roomType]);
 
   // Fetch username from localStorage when component mounts
   useEffect(() => {
@@ -98,30 +116,30 @@ export default function ChatBox() {
     // Listen for incoming new messages
     const handleNewMessage = ({ sender, message, room }: { sender: string; message: string; room: string }) => {
       console.log(`New message from ${sender}: ${message}`);
-  
+
       setMessages((prevMessages) => {
         const roomMessages = prevMessages[room] || [];
-  
+
         // Prevent adding the same message if it was already optimistically added
         if (roomMessages.find((msg) => msg.message === message && msg.sender === sender)) {
           return prevMessages;
         }
-  
+
         return {
           ...prevMessages,
           [room]: [...roomMessages, { sender, message }],
         };
       });
     };
-  
+
     socket.on('newMessage', handleNewMessage);
-  
+
     // Cleanup listener on unmount
     return () => {
       socket.off('newMessage', handleNewMessage);
     };
   }, []);
-  
+
 
   // Handle room joining and message history
   useEffect(() => {
@@ -158,14 +176,14 @@ export default function ChatBox() {
     }
   }, [userName]);
 
- // Listen for the 'createRoom' response from the server
+  // Listen for the 'createRoom' response from the server
   useEffect(() => {
- 
+
     socket.on('createRoomResponse', (response) => {
       if (response.success) {
         console.log(`Room created successfully: ${response.room}`);
         // Handle success, e.g., navigate to the new room or show a success message
-        setRooms((prevRooms) => [...prevRooms, response.room]); 
+        setRooms((prevRooms) => [...prevRooms, response.room]);
       } else {
         console.error(`Failed to create room: ${response.error}`);
         // Handle error, e.g., show an error message to the user
@@ -177,19 +195,20 @@ export default function ChatBox() {
     };
   }, []);
 
-   // const handleRoomInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // const handleRoomInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   //   console.log("Room name:", e.target.value);
   //   setRoom(e.target.value);  // Update room state as user types
   // };
 
   // Send message logic
-  
+
   const handleSendMessage = (message: any) => {
     if (!room || !userName) {
       console.error("Room or UserName is missing");
       return;
     }
     const data = { room, message, sender: userName };
+    console.log("Sending message:", data);  // Check if this log appears
     // Emit message to the server
     socket.emit("message", data);
     // Optimistic update (if you want it)
@@ -208,16 +227,16 @@ export default function ChatBox() {
     });
   };
 
-//create room after temp room created
+  //create room after temp room created
   const handleCreateRoom = () => {
     if (tempRoom.trim().length < 2) {
       console.error("Room name should be at least 2 characters long.");
       return;
     }
-    socket.emit("createRoom", tempRoom);
+      socket.emit("createRoom", {name: tempRoom, type: roomType });
     setTempRoom(""); // Clear the input field after emitting the event
-  
-    setIsCreating(false); 
+
+    setIsCreating(false);
   };
 
   const handleSelectRoom = (selectedRoom: string) => {
@@ -264,7 +283,7 @@ export default function ChatBox() {
     setRoom(e.target.value);
   };
 
-  
+
   return (
     <div>
       <button
@@ -312,11 +331,20 @@ export default function ChatBox() {
                 <div className="flex space-x-2">
                   <input
                     type="text"
-                    placeholder="Enter new room name"
+                    placeholder="Select room to create"
                     value={tempRoom}
                     onChange={(e) => setTempRoom(e.target.value)}
-                    className="w-42 h-10 px-4 py-2 mb-4 border-2 text-black text-xs placeholder-gray-800 rounded-lg"
+                    className="w-46 h-10 px-4 py-2 mb-4 border-2 text-black text-xs placeholder-gray-800 rounded-lg"
                   />
+                  <select
+                    id="roomType"
+                    className="bg-gray-800 text-sm h-10"
+                    value={roomType}
+                    onChange={(e) => setRoomType(e.target.value)}  // This updates the roomType state
+                  >
+                    <option value="chat">Chat</option>
+                    <option value="game">Game</option>
+                  </select>
                   <button
                     className="w-32 h-11 px-4 py-2 text-white text-xs bg-green-500 rounded-lg"
                     onClick={handleCreateRoom}
