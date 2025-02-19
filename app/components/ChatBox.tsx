@@ -267,8 +267,6 @@ export default function ChatBox() {
 
   const openModal = () => {
     setIsModalOpen(true);
-       // Fetch rooms immediately when modal opens
-       socket.emit("fetchRooms");
   };
 
   const closeModal = () => {
