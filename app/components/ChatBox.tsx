@@ -5,12 +5,16 @@ import { socket } from "../lib/socketClient";
 import ChatForm from "./ChatForm";
 import ChatMessage from "./ChatMessage";
 import "../globals.css";
+interface Room {
+  name: string;
+  type: string;  // chat or game
+}
 
 export default function ChatBox() {
   const [room, setRoom] = useState("");
   const [tempRoom, setTempRoom] = useState("");
   const [newMessage, setNewMessage] = useState("");
-  const [rooms, setRooms] = useState<string[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [userName, setUserName] = useState("");
   const [joined, setJoined] = useState(false);
   const [messages, setMessages] = useState<{
@@ -20,7 +24,7 @@ export default function ChatBox() {
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [roomType, setRoomType] = useState("chat");
-  const [filteredRooms, setFilteredRooms] = useState([]); 
+  const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
 
          // State to store the list of rooms
   
@@ -29,10 +33,10 @@ export default function ChatBox() {
           socket.emit('fetchRooms');  // Emit event to fetch rooms from the server
       
           // Listen for available rooms from the server
-          socket.on('availableRooms', (allRooms) => {
-            setRooms(allRooms);
+          socket.on("availableRooms", (allRooms: any[]) => {
+            setRooms(allRooms); // Set all available rooms
             setFilteredRooms(allRooms.filter((room: { type: string }) => room.type === roomType));  // Filter rooms by type
-          });
+        });
       
           return () => {
             socket.off('availableRooms');  // Cleanup on unmount
@@ -239,8 +243,8 @@ export default function ChatBox() {
     setIsCreating(false);
   };
 
-  const handleSelectRoom = (selectedRoom: string) => {
-    setRoom(selectedRoom);
+  const handleSelectRoom = (selectedRoom: Room) => {
+    setRoom(selectedRoom.name);
   };
 
   const handleLeaveRoom = () => {
@@ -251,7 +255,7 @@ export default function ChatBox() {
 
   const handleRemoveRoom = (roomToRemove: string) => {
     socket.emit("removeRoom", roomToRemove); // Emit room removal to the server
-    setRooms((prevRooms) => prevRooms.filter((r) => r !== roomToRemove)); // Update the rooms list after removing
+    setRooms((prevRooms) => prevRooms.filter((r) => r.name !== roomToRemove)); // Update the rooms list after removing
   };
 
   const handleJoinRoom = () => {
@@ -307,19 +311,19 @@ export default function ChatBox() {
                   <br />
                   <ul className="list-disc pl-4">
                     {rooms.map((availableRooms) => (
-                      <li key={availableRooms} className="mt-2">
+                      <li key={availableRooms.name} className="mt-2">
                         <button
                           onClick={() => handleSelectRoom(availableRooms)}
-                          className={`text-base ${room === availableRooms
+                          className={`text-base ${room === availableRooms.name
                             ? "bg-blue-500 text-white"
                             : "text-blue-500"
                             } p-2 rounded-lg`}
                         >
-                          {availableRooms}
+                          {availableRooms.name}
                         </button>
                         <button
                           className="text-red-500 ml-2"
-                          onClick={() => handleRemoveRoom(availableRooms)}
+                          onClick={() => handleRemoveRoom(availableRooms.name)}
                         >
                           X
                         </button>
